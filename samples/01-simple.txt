@@ -1,0 +1,5 @@
+Notas rápidas
+
+Este es un documento de una página para comprobar que Doclight abre, edita y guarda texto plano.
+
+Se puede copiar, pegar y seguir escribiendo sin distracciones.

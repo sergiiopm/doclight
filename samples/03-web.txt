@@ -1,0 +1,11 @@
+Pegado desde una página web
+
+Este bloque imita contenido copiado de un artículo: títulos cortos, listas y énfasis.
+
+Reglas rápidas
+
+- El pegado debe conservar negrita y cursiva cuando el origen las trae.
+- Las listas no deberían desmontarse.
+- El texto no puede llegar lleno de estilos raros.
+
+Un ejemplo con un enlace conceptual y una cita breve: “menos interfaz, más documento”.
