@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
-import { useEditor, useEditorState } from "@tiptap/react";
+import { useEditorState } from "@tiptap/react";
 import { Minus, Plus } from "lucide-react";
 import { DocumentCanvas } from "@/components/DocumentCanvas";
 import { FindBar } from "@/components/FindBar";
 import { LinkDialog } from "@/components/LinkDialog";
+import { TabBar } from "@/components/TabBar";
 import { Toolbar } from "@/components/Toolbar";
 import { UnsavedDialog } from "@/components/UnsavedDialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createEditorExtensions, editorProps } from "@/editor/extensions";
 import { useDocumentLanguage } from "@/hooks/use-document-language";
-import { useDocumentSession } from "@/hooks/use-document-session";
+import { useDocumentTabs } from "@/hooks/use-document-tabs";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import { useZoom } from "@/hooks/use-zoom";
 import { LANGUAGE_OPTIONS } from "@/lib/language";
+import { cn } from "@/lib/utils";
 import { applyTheme, getPreferredTheme, type ThemeMode } from "@/lib/theme";
 import { applyTextTransform, getLinkHref } from "@/lib/text-transform";
 
@@ -24,15 +25,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const zoom = useZoom();
+  const [locale, setLocale] = useState("es-ES");
 
-  const editor = useEditor({
-    extensions: createEditorExtensions(),
-    content: "<p></p>",
-    autofocus: "end",
-    editorProps,
-    immediatelyRender: false,
-    shouldRerenderOnTransaction: false,
-  });
+  const session = useDocumentTabs({ onError: setError, locale });
+  const editor = session.editor;
 
   const languageState = useDocumentLanguage(editor);
 
@@ -55,11 +51,9 @@ export default function App() {
     }),
   });
 
-  const session = useDocumentSession({
-    editor,
-    onError: setError,
-    locale: languageState.language.locale,
-  });
+  useEffect(() => {
+    setLocale(languageState.language.locale);
+  }, [languageState.language.locale]);
 
   useEffect(() => {
     const initial = getPreferredTheme();
@@ -82,6 +76,9 @@ export default function App() {
       if (editor) applyTextTransform(editor, "sentence", languageState.language.locale);
     },
     onInsertLink: () => setLinkOpen(true),
+    onCloseTab: session.closeActiveTab,
+    onNextTab: session.nextTab,
+    onPreviousTab: session.previousTab,
   });
 
   return (
@@ -103,6 +100,14 @@ export default function App() {
           applyTheme(next);
         }}
       />
+      <TabBar
+        tabs={session.tabs}
+        activeId={session.activeTab.id}
+        onSelect={session.activate}
+        onClose={session.closeTab}
+        onMove={session.moveTab}
+        onNew={session.newDocument}
+      />
       {findOpen ? (
         <FindBar
           editor={editor}
@@ -114,7 +119,7 @@ export default function App() {
       <div className="flex items-center justify-between gap-3 px-4 py-1 text-[11px] text-muted-foreground">
         <span>
           {session.fileName}
-          {session.dirty ? " — sin guardar" : ""}
+          {session.activeTab.dirty ? " — sin guardar" : ""}
         </span>
         <div className="flex items-center gap-2">
           <Select value={languageState.mode} onValueChange={languageState.choose}>
@@ -160,17 +165,28 @@ export default function App() {
           </button>
         </div>
       ) : null}
-      <main className="min-h-0 flex-1 overflow-auto">
-        <DocumentCanvas
-          editor={editor}
-          zoom={zoom.zoom}
-          locale={languageState.language.locale}
-          onInsertLink={() => setLinkOpen(true)}
-        />
+      <main className="relative min-h-0 flex-1">
+        {session.tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={cn(
+              "absolute inset-0 overflow-auto",
+              tab.id !== session.activeTab.id && "pointer-events-none invisible",
+            )}
+            aria-hidden={tab.id !== session.activeTab.id}
+          >
+            <DocumentCanvas
+              editor={tab.editor}
+              zoom={zoom.zoom}
+              locale={languageState.language.locale}
+              onInsertLink={() => setLinkOpen(true)}
+            />
+          </div>
+        ))}
       </main>
       <UnsavedDialog
-        open={session.pendingAction !== null}
-        documentName={session.fileName}
+        open={session.pendingCloseName !== null}
+        documentName={session.pendingCloseName ?? session.fileName}
         onSave={() => void session.confirmPending("save")}
         onDiscard={() => void session.confirmPending("discard")}
         onCancel={() => void session.confirmPending("cancel")}

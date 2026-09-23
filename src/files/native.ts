@@ -27,11 +27,11 @@ export async function writePathBytes(path: string, bytes: Uint8Array): Promise<v
   await invoke("write_file_b64", { path, contents: bytesToBase64(bytes) });
 }
 
-export async function pickOpenPath(): Promise<string | null> {
+export async function pickOpenPaths(): Promise<string[]> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const selected = await open({
-    title: "Abrir documento",
-    multiple: false,
+    title: "Abrir documentos",
+    multiple: true,
     filters: [
       { name: "Documentos", extensions: ["docx", "txt", "md"] },
       { name: "Word", extensions: ["docx"] },
@@ -40,7 +40,8 @@ export async function pickOpenPath(): Promise<string | null> {
     ],
   });
 
-  return typeof selected === "string" ? selected : null;
+  if (!selected) return [];
+  return Array.isArray(selected) ? selected : [selected];
 }
 
 export async function pickSavePath(defaultPath: string): Promise<string | null> {
@@ -68,13 +69,14 @@ export function downloadBytes(fileName: string, bytes: Uint8Array) {
   URL.revokeObjectURL(url);
 }
 
-export function pickBrowserFile(): Promise<File | null> {
+export function pickBrowserFiles(): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
+    input.multiple = true;
     input.accept = ".docx,.txt,.md,.markdown,text/plain,text/markdown";
     input.addEventListener("change", () => {
-      resolve(input.files?.[0] ?? null);
+      resolve(Array.from(input.files ?? []));
     }, { once: true });
     input.click();
   });

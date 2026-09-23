@@ -1,7 +1,7 @@
 {
   "name": "doclight",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A lightweight, minimal local document editor for Windows",
   "author": "sergiiopm",
   "license": "MIT",

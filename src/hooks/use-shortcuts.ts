@@ -9,6 +9,9 @@ interface ShortcutHandlers {
   onRedo: () => void;
   onSentenceCase: () => void;
   onInsertLink: () => void;
+  onCloseTab: () => void;
+  onNextTab: () => void;
+  onPreviousTab: () => void;
 }
 
 export function useShortcuts({
@@ -20,6 +23,9 @@ export function useShortcuts({
   onRedo,
   onSentenceCase,
   onInsertLink,
+  onCloseTab,
+  onNextTab,
+  onPreviousTab,
 }: ShortcutHandlers) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -32,8 +38,19 @@ export function useShortcuts({
       const mod = event.ctrlKey || event.metaKey;
       if (!mod) return;
 
+      if (event.key === "Tab" || event.key === "PageDown" || event.key === "PageUp") {
+        event.preventDefault();
+        const backwards = event.key === "PageUp" || (event.key === "Tab" && event.shiftKey);
+        if (backwards) onPreviousTab();
+        else onNextTab();
+        return;
+      }
+
       const key = event.key.toLowerCase();
-      if (key === "n") {
+      if (key === "w") {
+        event.preventDefault();
+        onCloseTab();
+      } else if (key === "n") {
         event.preventDefault();
         onNew();
       } else if (key === "o") {
@@ -59,5 +76,17 @@ export function useShortcuts({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onFind, onInsertLink, onNew, onOpen, onRedo, onSave, onSaveAs, onSentenceCase]);
+  }, [
+    onCloseTab,
+    onFind,
+    onInsertLink,
+    onNew,
+    onNextTab,
+    onOpen,
+    onPreviousTab,
+    onRedo,
+    onSave,
+    onSaveAs,
+    onSentenceCase,
+  ]);
 }
