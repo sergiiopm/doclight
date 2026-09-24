@@ -68,6 +68,12 @@ export function EditorContextMenu({ editor, locale, onInsertLink, children }: Ed
             </ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
+        <ContextMenuItem
+          disabled={!menu.hasSelection}
+          onSelect={() => editor?.chain().focus().unsetColor().unsetBackgroundColor().removeEmptyTextStyle().run()}
+        >
+          Quitar colores
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={onInsertLink}>{menu.href ? "Editar enlace" : "Insertar enlace"}</ContextMenuItem>
         {menu.href ? (

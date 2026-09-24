@@ -15,6 +15,7 @@ import { useShortcuts } from "@/hooks/use-shortcuts";
 import { useZoom } from "@/hooks/use-zoom";
 import { LANGUAGE_OPTIONS } from "@/lib/language";
 import { cn } from "@/lib/utils";
+import { getCopyMode, setCopyMode, type CopyMode } from "@/lib/copy-mode";
 import { applyTheme, getPreferredTheme, type ThemeMode } from "@/lib/theme";
 import { applyTextTransform, getLinkHref } from "@/lib/text-transform";
 
@@ -26,6 +27,7 @@ export default function App() {
   const [linkOpen, setLinkOpen] = useState(false);
   const zoom = useZoom();
   const [locale, setLocale] = useState("es-ES");
+  const [copyMode, setCopyModeState] = useState<CopyMode>(getCopyMode);
 
   const session = useDocumentTabs({ onError: setError, locale });
   const editor = session.editor;
@@ -138,6 +140,23 @@ export default function App() {
               ))}
             </SelectContent>
           </Select>
+          <button
+            type="button"
+            className="cursor-pointer rounded px-1 hover:text-foreground"
+            title={
+              copyMode === "web"
+                ? "Modo WEB: al copiar se quitan colores de texto y de fondo. Clic para cambiar a DOC."
+                : "Modo DOC: al copiar se mantienen colores de texto y de fondo. Clic para cambiar a WEB."
+            }
+            aria-label="Modo de copia"
+            onClick={() => {
+              const next = copyMode === "web" ? "doc" : "web";
+              setCopyMode(next);
+              setCopyModeState(next);
+            }}
+          >
+            Copia: <span className="font-semibold">{copyMode === "web" ? "WEB" : "DOC"}</span>
+          </button>
           <span>{session.formatLabel}</span>
           <div className="flex items-center">
             <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={zoom.zoomOut} aria-label="Alejar">

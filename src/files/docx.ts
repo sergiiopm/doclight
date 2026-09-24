@@ -7,10 +7,13 @@ import {
   Packer,
   Paragraph,
   type ParagraphChild,
+  ShadingType,
   TextRun,
+  type IRunOptions,
   UnderlineType,
 } from "docx";
 import mammoth from "mammoth";
+import { applyDocxColors, cssColorToHex, highlightNameForHex, prepareDocxColors } from "@/files/docx-colors";
 import { getTextAlign, parseHtml } from "@/files/html";
 import { sanitizeHref } from "@/lib/open-url";
 
@@ -19,6 +22,16 @@ interface Marks {
   italics: boolean;
   underline: boolean;
   link: boolean;
+  color?: string;
+  background?: string;
+}
+
+function backgroundProps(background: string | undefined): Pick<IRunOptions, "highlight" | "shading"> {
+  if (!background) return {};
+  const highlight = highlightNameForHex(background) as IRunOptions["highlight"];
+  return highlight
+    ? { highlight }
+    : { shading: { type: ShadingType.CLEAR, fill: background, color: "auto" } };
 }
 
 function alignmentOf(element: Element) {
@@ -41,7 +54,8 @@ function runFromText(text: string, marks: Marks, locale: string): TextRun | null
     bold: marks.bold || undefined,
     italics: marks.italics || undefined,
     underline: (marks.underline || marks.link) ? { type: UnderlineType.SINGLE } : undefined,
-    color: marks.link ? "0563C1" : undefined,
+    color: marks.link ? "0563C1" : marks.color,
+    ...backgroundProps(marks.background),
     language: { value: locale },
   });
 }
@@ -78,6 +92,10 @@ function nextMarks(node: HTMLElement, marks: Marks): Marks {
   if (tag === "U" || /text-decoration:\s*underline/i.test(style)) {
     next.underline = true;
   }
+  const color = cssColorToHex(node.style.color);
+  if (color) next.color = color;
+  const background = cssColorToHex(node.style.backgroundColor);
+  if (background) next.background = background;
   if (tag === "A" && sanitizeHref(node.getAttribute("href"))) {
     next.link = true;
   }
@@ -253,9 +271,12 @@ export async function htmlToDocxBytes(html: string, locale = "es-ES"): Promise<U
 }
 
 export async function docxBytesToHtml(bytes: Uint8Array): Promise<string> {
-  const copy = bytes.slice();
-  const result = await mammoth.convertToHtml({
-    arrayBuffer: copy.buffer as ArrayBuffer,
-  });
-  return result.value.trim() ? result.value : "<p></p>";
+  const prepared = await prepareDocxColors(bytes.slice());
+  const copy = prepared.bytes.slice();
+  const result = await mammoth.convertToHtml(
+    { arrayBuffer: copy.buffer as ArrayBuffer },
+    { styleMap: prepared.styleMap },
+  );
+  const html = applyDocxColors(result.value, prepared.styles);
+  return html.trim() ? html : "<p></p>";
 }
